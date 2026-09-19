@@ -1,9 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
-
+// Backend API URL
+// Local: set VITE_API_URL in .env if needed
+// Production: set VITE_API_URL in Render
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,15 +14,17 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('sqr_token');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Intercept 401s
+// Intercept 401 responses
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -30,91 +33,149 @@ api.interceptors.response.use(
       localStorage.removeItem('sqr_token');
       localStorage.removeItem('sqr_user');
     }
+
     return Promise.reject(error);
   }
 );
 
+
+// ============================================================
+// Authentication
+// ============================================================
+
 export const authService = {
   login: async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
+    const response = await api.post('/auth/login', {
+      email,
+      password,
+    });
+
     return response.data;
   },
 
   register: async (userData) => {
     const response = await api.post('/auth/register', userData);
+
     return response.data;
   },
 
   getCurrentUser: async () => {
     const response = await api.get('/auth/me');
+
     return response.data;
   },
 
   testStudentRole: async () => {
     const response = await api.get('/auth/test-student');
+
     return response.data;
   },
 
   testAdminRole: async () => {
     const response = await api.get('/auth/test-admin');
+
     return response.data;
   },
 };
 
+
+// ============================================================
+// Student Queries
+// ============================================================
+
 export const queryService = {
   ask: async (question, category) => {
-    const response = await api.post('/queries/ask', { question, category });
+    const response = await api.post('/queries/ask', {
+      question,
+      category,
+    });
+
     return response.data;
   },
 
   getHistory: async () => {
     const response = await api.get('/queries/history');
+
     return response.data;
   },
 
   submitFeedback: async (queryId, rating, comment = null) => {
-    const response = await api.post(`/queries/${queryId}/feedback`, { rating, comment });
+    const response = await api.post(
+      `/queries/${queryId}/feedback`,
+      {
+        rating,
+        comment,
+      }
+    );
+
     return response.data;
   },
 };
 
+
+// ============================================================
+// Admin Knowledge Management
+// ============================================================
+
 export const adminKnowledgeService = {
   list: async (params = {}) => {
-    const response = await api.get('/admin/knowledge', { params });
+    const response = await api.get('/admin/knowledge', {
+      params,
+    });
+
     return response.data;
   },
 
   create: async (itemData) => {
     const response = await api.post('/admin/knowledge', itemData);
+
     return response.data;
   },
 
   update: async (itemId, itemData) => {
-    const response = await api.put(`/admin/knowledge/${itemId}`, itemData);
+    const response = await api.put(
+      `/admin/knowledge/${itemId}`,
+      itemData
+    );
+
     return response.data;
   },
 
   delete: async (itemId) => {
-    const response = await api.delete(`/admin/knowledge/${itemId}`);
+    const response = await api.delete(
+      `/admin/knowledge/${itemId}`
+    );
+
     return response.data;
   },
 
   toggleStatus: async (itemId) => {
-    const response = await api.patch(`/admin/knowledge/${itemId}/toggle-status`);
+    const response = await api.patch(
+      `/admin/knowledge/${itemId}/toggle-status`
+    );
+
     return response.data;
   },
 
   getStats: async () => {
     const response = await api.get('/admin/feedback-stats');
+
     return response.data;
   },
 };
 
+
+// ============================================================
+// System
+// ============================================================
+
 export const systemService = {
   getHealth: async () => {
     const response = await api.get('/health');
+
     return response.data;
   },
 };
+
 
 export default api;
