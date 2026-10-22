@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -8,8 +9,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { login } = useAuth();
+
+  const { login, getDashboardPath } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,14 +20,13 @@ const Login = () => {
 
     try {
       const user = await login(email, password);
-      if (user.role === 'ADMIN') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/student/dashboard');
-      }
+      const dashboardPath = getDashboardPath(user);
+      navigate(dashboardPath, { replace: true });
     } catch (err) {
       setError(
-        err.response?.data?.detail || 'Authentication failed. Please check your credentials.'
+        err.response?.data?.detail ||
+          err.message ||
+          'Authentication failed. Please check your credentials.'
       );
     } finally {
       setIsLoading(false);
@@ -34,14 +34,14 @@ const Login = () => {
   };
 
   const handleFillAdmin = () => {
-    setEmail('admin@platform.edu');
-    setPassword('Admin@12345');
+    setEmail('');
+    setPassword('');
     setError('');
   };
 
   const handleFillStudent = () => {
-    setEmail('sarah.connor@student.edu');
-    setPassword('SecurePass@2026');
+    setEmail('');
+    setPassword('');
     setError('');
   };
 
@@ -65,11 +65,11 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+            <label htmlFor="email">Institute Email</label>
             <input
               id="email"
               type="email"
-              placeholder="e.g. name@student.edu"
+              placeholder="e.g. xyz.cs24@nip.ac.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -82,7 +82,7 @@ const Login = () => {
             <input
               id="password"
               type="password"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -90,19 +90,31 @@ const Login = () => {
             />
           </div>
 
-          <button type="submit" className="btn-primary-block" disabled={isLoading}>
+          <button
+            type="submit"
+            className="btn-primary-block"
+            disabled={isLoading}
+          >
             {isLoading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
 
         <div className="demo-shortcuts">
-          <p className="demo-title">Quick Demo Logins:</p>
+          <p className="demo-title">Account access</p>
           <div className="demo-buttons">
-            <button type="button" onClick={handleFillAdmin} className="btn-demo btn-demo-admin">
-              <Shield size={14} /> Fill Admin (admin@platform.edu)
+            <button
+              type="button"
+              onClick={handleFillAdmin}
+              className="btn-demo btn-demo-admin"
+            >
+              <Shield size={14} /> Clear for Admin Login
             </button>
-            <button type="button" onClick={handleFillStudent} className="btn-demo btn-demo-student">
-              <GraduationCap size={14} /> Fill Student (sarah.connor@student.edu)
+            <button
+              type="button"
+              onClick={handleFillStudent}
+              className="btn-demo btn-demo-student"
+            >
+              <GraduationCap size={14} /> Clear for Student Login
             </button>
           </div>
         </div>

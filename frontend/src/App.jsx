@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -14,7 +15,15 @@ const RootRedirect = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          fontFamily: 'sans-serif',
+        }}
+      >
         <p>Loading application...</p>
       </div>
     );
@@ -24,7 +33,7 @@ const RootRedirect = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (role === 'ADMIN') {
+  if (String(role).toUpperCase() === 'ADMIN') {
     return <Navigate to="/admin/dashboard" replace />;
   }
 

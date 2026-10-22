@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/api';
 
@@ -12,7 +13,10 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('sqr_token') || null);
+
+  const [token, setToken] = useState(
+    () => localStorage.getItem('sqr_token') || null
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,10 +27,11 @@ export const AuthProvider = ({ children }) => {
           setUser(profile);
           localStorage.setItem('sqr_user', JSON.stringify(profile));
         } catch (err) {
-          console.error("Session verification failed:", err);
+          console.error('Session verification failed:', err);
           logout();
         }
       }
+
       setLoading(false);
     };
 
@@ -34,25 +39,38 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = async (email, password) => {
-    const data = await authService.login(email, password);
+    const normalizedEmail = email.trim().toLowerCase();
+    const data = await authService.login(normalizedEmail, password);
+
     localStorage.setItem('sqr_token', data.access_token);
-    
-    // Fetch full profile
+
     const profile = {
       id: data.user_id,
       email: data.email,
       full_name: data.full_name,
-      role: data.role,
+      role: String(data.role).toUpperCase(),
     };
+
     localStorage.setItem('sqr_user', JSON.stringify(profile));
-    
     setToken(data.access_token);
     setUser(profile);
+
     return profile;
   };
 
   const register = async (userData) => {
-    return await authService.register(userData);
+    const email = userData.email.trim().toLowerCase();
+
+    if (!/^[^\s@]+@nip\.ac\.in$/.test(email)) {
+      throw new Error(
+        'Please use an institute email ending with @nip.ac.in.'
+      );
+    }
+
+    return await authService.register({
+      ...userData,
+      email,
+    });
   };
 
   const logout = () => {
@@ -60,6 +78,17 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('sqr_user');
     setToken(null);
     setUser(null);
+  };
+
+  const getDashboardPath = (currentUser) => {
+    if (!currentUser) return '/login';
+
+    const role = String(currentUser.role || '').toUpperCase();
+
+    if (role === 'ADMIN') return '/admin/dashboard';
+    if (role === 'STUDENT') return '/student/dashboard';
+
+    return '/unauthorized';
   };
 
   return (
@@ -73,6 +102,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        getDashboardPath,
       }}
     >
       {children}
@@ -82,8 +112,10 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+
   return context;
 };

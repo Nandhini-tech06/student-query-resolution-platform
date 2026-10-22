@@ -1,56 +1,91 @@
+
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.session import init_db, SessionLocal
-from app.models.user import User, UserRole
 from app.core.security import get_password_hash
+from app.db.session import init_db, SessionLocal
+from app.db.seed_knowledge import seed_knowledge_base
+from app.models.user import User, UserRole
 from app.api.v1 import api_router
 from app.api.v1.health import router as root_health_router
 
 
-from app.db.seed_knowledge import seed_knowledge_base
-
-
 def seed_database():
-    db = SessionLocal()
+    db: Session = SessionLocal()
+
     try:
-        admin_exists = db.query(User).filter(User.email == settings.FIRST_ADMIN_EMAIL).first()
-        if not admin_exists:
+        admin_email = settings.FIRST_ADMIN_EMAIL.strip().lower()
+
+        admin_user = (
+            db.query(User)
+            .filter(User.email == admin_email)
+            .first()
+        )
+
+        if admin_user is None:
             admin_user = User(
-                email=settings.FIRST_ADMIN_EMAIL,
-                hashed_password=get_password_hash(settings.FIRST_ADMIN_PASSWORD),
+                email=admin_email,
+                hashed_password=get_password_hash(
+                    settings.FIRST_ADMIN_PASSWORD
+                ),
                 full_name=settings.FIRST_ADMIN_NAME,
                 role=UserRole.ADMIN,
-                is_active=True
+                is_active=True,
             )
+
             db.add(admin_user)
-            db.commit()
-            print(f"[*] Initial Admin created: {settings.FIRST_ADMIN_EMAIL}")
+            print(f"[*] Initial Admin created: {admin_email}")
+
         else:
-            print(f"[*] Admin account exists: {settings.FIRST_ADMIN_EMAIL}")
+            admin_user.hashed_password = get_password_hash(
+                settings.FIRST_ADMIN_PASSWORD
+            )
+            admin_user.full_name = settings.FIRST_ADMIN_NAME
+            admin_user.role = UserRole.ADMIN
+            admin_user.is_active = True
+
+            print(
+                f"[*] Admin credentials synchronized: {admin_email}"
+            )
+
+        db.commit()
+
+        print("[*] Admin account is ready.")
 
         # Seed initial verified knowledge items
         seed_knowledge_base(db)
+
+    except Exception:
+        db.rollback()
+        raise
+
     finally:
         db.close()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Ensure tables exist and default data is seeded
+    # Initialize database tables
     init_db()
+
+    # Create or synchronize the configured admin account
     seed_database()
+
     yield
-    # Shutdown logic if needed
 
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Student Query Resolution Platform Backend API using FastAPI",
+    description=(
+        "Student Query Resolution Platform Backend API "
+        "using FastAPI"
+    ),
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS configuration for React frontend
@@ -62,9 +97,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount Routers
-app.include_router(root_health_router)  # /health at root
-app.include_router(api_router, prefix=settings.API_V1_STR)
+# Mount routers
+app.include_router(root_health_router)
+app.include_router(
+    api_router,
+    prefix=settings.API_V1_STR,
+)
 
 
 @app.get("/", tags=["Root"])
@@ -73,5 +111,5 @@ def root():
         "message": f"Welcome to {settings.PROJECT_NAME} API",
         "documentation": "/docs",
         "health": "/health",
-        "api_v1": settings.API_V1_STR
+        "api_v1": settings.API_V1_STR,
     }

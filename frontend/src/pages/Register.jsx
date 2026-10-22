@@ -1,17 +1,48 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+
+const departments = [
+  {
+    label: 'Undergraduate Programmes',
+    options: [
+      'Computer Science and Engineering (B.E.)',
+      'Artificial Intelligence and Data Science (B.Tech.)',
+      'Artificial Intelligence and Machine Learning (B.Tech.)',
+      'Information Technology (B.Tech.)',
+      'Electronics and Communication Engineering (B.E.)',
+      'Electrical and Electronics Engineering (B.E.)',
+      'Electronics and Instrumentation Engineering (B.E.)',
+      'Mechanical Engineering (B.E.)',
+      'Mechatronics Engineering (B.E.)',
+      'Biotechnology (B.Tech.)',
+      'Agricultural Engineering (B.Tech.)',
+      'Aeronautical Engineering (B.E.)',
+      'Automobile Engineering (B.E.)',
+      'Biomedical Engineering (B.E.)',
+    ],
+  },
+  {
+    label: 'Postgraduate Programmes',
+    options: [
+      'Master of Business Administration (MBA)',
+      'Industrial Safety Engineering (M.E.)',
+    ],
+  },
+];
 
 const Register = () => {
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
     student_id: '',
-    department: 'Computer Science',
+    department: 'Computer Science and Engineering (B.E.)',
     password: '',
     confirmPassword: '',
   });
+
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,13 +51,25 @@ const Register = () => {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    const email = formData.email.trim().toLowerCase();
+
+    if (!/^[^\s@]+@nip\.ac\.in$/.test(email)) {
+      setError(
+        'Please use your official institute email ending with @nip.ac.in.'
+      );
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
@@ -43,19 +86,21 @@ const Register = () => {
     try {
       await register({
         full_name: formData.full_name,
-        email: formData.email,
+        email,
         student_id: formData.student_id,
         department: formData.department,
         password: formData.password,
       });
 
       setSuccess('Account created successfully! Redirecting to sign in...');
+
       setTimeout(() => {
         navigate('/login');
       }, 1500);
     } catch (err) {
       setError(
-        err.response?.data?.detail || 'Registration failed. Please verify your details.'
+        err.response?.data?.detail ||
+          'Registration failed. Please verify your details.'
       );
     } finally {
       setIsLoading(false);
@@ -69,8 +114,11 @@ const Register = () => {
           <div className="auth-icon-wrapper">
             <UserPlus size={26} color="#2563eb" />
           </div>
+
           <h2>Student Registration</h2>
-          <p>Create an account to query university services and view history</p>
+          <p>
+            Create an account to query university services and view history
+          </p>
         </div>
 
         {error && (
@@ -102,16 +150,17 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Student Email</label>
+            <label htmlFor="email">Institute Email</label>
             <input
               id="email"
               name="email"
               type="email"
-              placeholder="e.g. alex.morgan@student.edu"
+              placeholder="e.g. student@nip.ac.in"
               value={formData.email}
               onChange={handleChange}
               required
             />
+            <small>Only email addresses ending with @nip.ac.in are accepted.</small>
           </div>
 
           <div className="form-row">
@@ -129,19 +178,23 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="department">Department</label>
+              <label htmlFor="department">Department / Programme</label>
               <select
                 id="department"
                 name="department"
                 value={formData.department}
                 onChange={handleChange}
+                required
               >
-                <option value="Computer Science">Computer Science</option>
-                <option value="Information Technology">Information Technology</option>
-                <option value="Mechanical Engineering">Mechanical Engineering</option>
-                <option value="Electronics & Comm">Electronics & Comm</option>
-                <option value="Civil Engineering">Civil Engineering</option>
-                <option value="Business Administration">Business Administration</option>
+                {departments.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.options.map((department) => (
+                      <option key={department} value={department}>
+                        {department}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>
@@ -172,7 +225,11 @@ const Register = () => {
             />
           </div>
 
-          <button type="submit" className="btn-primary-block" disabled={isLoading}>
+          <button
+            type="submit"
+            className="btn-primary-block"
+            disabled={isLoading}
+          >
             {isLoading ? 'Creating Account...' : 'Register as Student'}
           </button>
         </form>
